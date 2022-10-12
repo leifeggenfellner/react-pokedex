@@ -1,7 +1,8 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import axios from 'axios';
+import React, {lazy, Suspense} from 'react';
 import { useEffect, useState } from 'react';
-import PokemonCard from './components/Pokemon';
+const PokemonCard = lazy(() => import('./components/Pokemon'));
 
 type PokemonList = {
   url: string;
@@ -11,22 +12,36 @@ export default function App() {
   const [pokemonList, setPokemonList] = useState<PokemonList[]>();
 
   const getPokemonList = async () => {
-    const { data } = await axios.get(
-      'https://pokeapi.co/api/v2/pokemon?limit=151'
-    );
-    setPokemonList(data.results);
+    try { 
+      const { data } = await axios.get(
+        'https://pokeapi.co/api/v2/pokemon?limit=151'
+      );
+      return data;
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   useEffect(() => {
-    getPokemonList();
+    let mounted = true;
+    getPokemonList().then(data => {
+      if (mounted) {
+        setPokemonList(data.results);
+      }
+    });
+    return () => {
+      mounted = false;
+    }
   }, []);
 
   return (
     <div className="bg-gray-700 min-h-screen w-full">
-      <header className="text-white flex gap-2 flex-wrap">
+      <main className="text-white flex gap-2 flex-wrap">
+        <Suspense fallback={<div>Loading...</div>}>
         {pokemonList &&
           pokemonList.map((pokemon) => <PokemonCard url={pokemon.url} />)}
-      </header>
+          </Suspense>
+      </main>
     </div>
   );
 }
